@@ -26,19 +26,19 @@ void authentication_off()
 	ic_power_off();
 }
 
-void get_otp_data(uint8_t* buf)
+int get_otp_data(uint8_t* buf)
 {
 	sha204_read_otp(buf);
 
 }
 
-void get_cfg_data(uint8_t* buf)
+int get_cfg_data(uint8_t* buf)
 {
 	sha204_read_cfg(buf);
 
 }
 
-void get_solt_data(uint8_t *secret_key, uint8_t *challenge, uint8_t read_key_id, uint8_t read_solt_id, uint8_t* buf)
+int get_solt_data(uint8_t *secret_key, uint8_t *challenge, uint8_t read_key_id, uint8_t read_solt_id, uint8_t* buf)
 {
 	sha204_read_solt(secret_key, challenge, read_key_id, read_solt_id, buf);
 

@@ -29,7 +29,7 @@ int main()
 
 #if 1
 	memset(buf, 0x0, sizeof(buf));
-	get_cfg_data(buf);
+	ret = get_cfg_data(buf);
 	printf("\nread cfg :");
 	for(i = 0; i < 88; i++)
 		printf("%02X ", buf[i]);
@@ -38,7 +38,7 @@ int main()
 
 #if 1
 	memset(buf, 0x0, sizeof(buf));
-	get_otp_data(buf);
+	ret = get_otp_data(buf);
 	printf("\nread otp :");
 	for(i = 0; i < 64; i++)
 		printf("%02X ", buf[i]);
@@ -48,7 +48,7 @@ int main()
 
 #if 1
 	memset(buf, 0x0, sizeof(buf));
-	get_solt_data(secret_key_1, challenge_date, 0x0f, 2, buf);
+	ret = get_solt_data(secret_key_1, challenge_date, 0x0f, 2, buf);
 	printf("\nread solt :");
 	for(i = 0; i < 32; i++)
 		printf("%02X ", buf[i]);

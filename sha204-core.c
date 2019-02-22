@@ -11,6 +11,7 @@
 #include "sha204-core.h"
 #include "i2c-core.h"
 
+volatile int cont = 20;
 
 static unsigned int SHFR(unsigned int x,uint8_t n)
 	{return (x>>=n);}
@@ -352,6 +353,7 @@ static uint8_t sha204h_decrypt(struct sha204h_decrypt_in_out param)
 	}
 	// Update TempKey fields
 	param.temp_key->valid = 0;
+	
 	return 0x00;
 }
 
@@ -380,8 +382,9 @@ static uint8_t sha204m_execute_random( uint8_t *random_buf)
 	sha204p_send_command(7,tx_buffer);
 
 	delay_ms(25);
-
-	while(sha204p_receive_response(35, random_buf));
+	i = cont;
+	while(sha204p_receive_response(35, random_buf) && i)
+		i--;
 
 	#if 0
 	printf("random:");
@@ -390,7 +393,10 @@ static uint8_t sha204m_execute_random( uint8_t *random_buf)
 	printf("\n");
 	#endif
 	
-	return 0;
+	if(i > 0)
+		return 0;
+	else 
+		return -1;
 }
 
 
@@ -415,15 +421,20 @@ static uint8_t sha204m_execute_nonce( uint8_t *nonce_data ,uint8_t *rx_buffer)
 	sha204p_send_command(27,tx_buffer);
 
 	delay_ms(25);
+	i = cont;
+	while(sha204p_receive_response(35, rx_buffer) && i)
+		i--;
 
-	while(sha204p_receive_response(35, rx_buffer));
-
-	return 0;
+	if(i > 0)
+		return 0;
+	else 
+		return -1;
 }
 
 
 static uint8_t sha204m_execute_gendig(uint8_t key_id,uint8_t *response_buffer)
-{
+{	
+	int i;
 	uint8_t p_buffer[2];
 	uint8_t tx_buffer[39];
 	
@@ -440,10 +451,14 @@ static uint8_t sha204m_execute_gendig(uint8_t key_id,uint8_t *response_buffer)
 	sha204p_send_command(7,tx_buffer);
 
 	delay_ms(25);
+	i = cont;
+	while(sha204p_receive_response(4, response_buffer) && i)
+		i--;
 
-	while(sha204p_receive_response(4, response_buffer));
-	
-	return 0;
+	if(i > 0)
+		return 0;
+	else 
+		return -1;
 }
 
 
@@ -539,7 +554,6 @@ static uint8_t sha204m_execute_write_otp(uint16_t wrire_address , uint8_t *write
 static uint8_t sha204m_execute_read_otp(uint16_t read_address, uint8_t *response_order)
 {
 	uint8_t i=0;
-	int cont = 20;
 	uint8_t p_buffer[2];
 	uint8_t tx_buffer[7];
 	
@@ -565,23 +579,26 @@ static uint8_t sha204m_execute_read_otp(uint16_t read_address, uint8_t *response
 	delay_ms(25);
 
 	i = cont;
-	while(sha204p_receive_response(35, response_order) && i){
+	while(sha204p_receive_response(35, response_order) && i)
 		i--;
-	};
+	
 	#if 0
 		printf("recv:");
 		for(i = 0; i < 35; i++)
 			printf(" %02X", response_order[i]);
 		printf("\n");
 	#endif
+
+	if(i > 0)
+		return 0;
+	else 
+		return -1;
 	
-	return 0;
 }
 
 static uint8_t sha204m_execute_read_config_unit(uint8_t read_mode , uint16_t read_address,uint8_t *response_order)
 {	
 	int i;
-	int cont = 20;
 	uint8_t p_buffer[2];
 	uint8_t tx_buffer[7];
 	
@@ -627,13 +644,16 @@ static uint8_t sha204m_execute_read_config_unit(uint8_t read_mode , uint16_t rea
 		#endif
 	}
 	
-	return 0;
+	if(i > 0)
+		return 0;
+	else 
+		return -1;
 }
 
 
 static int sha204m_execute_read_data_unit(uint8_t read_mode , uint16_t read_address, uint8_t *response_order)
 {	
-	int i, cont = 20;
+	int i;
 	uint8_t p_buffer[2];
 	uint8_t tx_buffer[39];
 	
@@ -656,7 +676,7 @@ static int sha204m_execute_read_data_unit(uint8_t read_mode , uint16_t read_addr
 	
 	sha204p_send_command(7,tx_buffer);
 
-	delay_ms(35);
+	delay_ms(25);
 	i = cont;
 	if(read_mode&0x80) {
 		while(sha204p_receive_response(35, response_order) && i)
@@ -679,8 +699,10 @@ static int sha204m_execute_read_data_unit(uint8_t read_mode , uint16_t read_addr
 	#endif
 	
 	}
-	
-	return 0;
+	if(i > 0)
+		return 0;
+	else
+		return -1;
 }
 
 
@@ -737,41 +759,42 @@ static int sha204m_execute_lock_data_otp(uint8_t *response_order)
 
 static uint8_t sha204m_read_config(uint8_t *response_order)
 {	
+	int ret;
 	uint8_t buf[35];
 	
 	memset(buf, 0x0, sizeof(buf));
-	sha204m_execute_read_config_unit(0x80, 0x0000, buf);
+	ret |= sha204m_execute_read_config_unit(0x80, 0x0000, buf);
 	memmove(response_order, buf+ 1, 32);
 
 	memset(buf, 0x0, sizeof(buf));
-	sha204m_execute_read_config_unit(0x80, 0x0008, buf);
+	ret |= sha204m_execute_read_config_unit(0x80, 0x0008, buf);
 	memmove(response_order+32, buf+ 1, 32);
 	
 	memset(buf, 0x0, sizeof(buf));
-	sha204m_execute_read_config_unit(0x00, 0x0010, buf);
+	ret |= sha204m_execute_read_config_unit(0x00, 0x0010, buf);
 	memmove(response_order+64, buf+ 1, 4);
 
 	memset(buf, 0x0, sizeof(buf));
-	sha204m_execute_read_config_unit(0x00, 0x0011, buf);
+	ret |= sha204m_execute_read_config_unit(0x00, 0x0011, buf);
 	memmove(response_order+68, buf+ 1, 4);
 
 	memset(buf, 0x0, sizeof(buf));
-	sha204m_execute_read_config_unit(0x00, 0x0012, buf);
+	ret |= sha204m_execute_read_config_unit(0x00, 0x0012, buf);
 	memmove(response_order+72, buf+ 1, 4);
 
 	memset(buf, 0x0, sizeof(buf));
-	sha204m_execute_read_config_unit(0x00, 0x0013,buf);
+	ret |= sha204m_execute_read_config_unit(0x00, 0x0013,buf);
 	memmove(response_order+76, buf+ 1, 4);
 
 	memset(buf, 0x0, sizeof(buf));
-	sha204m_execute_read_config_unit(0x00, 0x0014, buf);
+	ret |= sha204m_execute_read_config_unit(0x00, 0x0014, buf);
 	memmove(response_order+80, buf+ 1, 4);
 	
 	memset(buf, 0x0, sizeof(buf));
-	sha204m_execute_read_config_unit(0x00, 0x0015, buf);
+	ret |= sha204m_execute_read_config_unit(0x00, 0x0015, buf);
 	memmove(response_order+84, buf+ 1, 4);
 	
-	return 0;			
+	return ret;
 }
 
 
@@ -781,14 +804,14 @@ static uint8_t atsha204_enc_read(uint16_t slot_to_read,  uint16_t key_id, uint8_
 	uint8_t response_buffer[35];
 
 	memset(response_buffer, 0x0, sizeof(response_buffer));
-	sha204m_execute_nonce(NumIn,response_buffer);
+	status |= sha204m_execute_nonce(NumIn,response_buffer);
 	nonce_param.mode =0x01;
 	nonce_param.num_in = NumIn;
 	nonce_param.rand_out = &response_buffer[1];	   //返回32位随机数
 	nonce_param.temp_key = &tempkey;               //SHA256计算结果
 	status |= sha204h_nonce(nonce_param);
 
-	sha204m_execute_gendig(key_id, response_buffer);
+	status |= sha204m_execute_gendig(key_id, response_buffer);
 	gendig_param.zone = 0x02;
 	gendig_param.key_id = key_id;
 	gendig_param.stored_value =secret_key;      //密钥
@@ -810,7 +833,7 @@ static uint8_t atsha204_enc_read(uint16_t slot_to_read,  uint16_t key_id, uint8_
 	printf("\n");
 #endif
 
-	return 0x00;
+	return status;
 }
 
 
@@ -843,58 +866,66 @@ static int sha204m_execute_mac(uint8_t sol_id,uint8_t *random, uint8_t *rx_buffe
 
 	//waiting 2.5ms
 	delay_ms(25);
+	i = cont;
+	while(sha204p_receive_response(35, rx_buffer) && i){
+		i--;
+	}
 
-	while(sha204p_receive_response(35, rx_buffer));
-
-	return 0;
+	if(i > 0)
+		return 0;
+	else
+		return -1;
 }
 
 
 int sha204_read_cfg(uint8_t *response_order)
-{
+{	
+	int ret;
 	uint8_t response_mac[35];
 	memset(response_mac, 0x0, sizeof(response_mac));
 	sha204c_wakeup(response_mac);
 
-	sha204m_read_config(response_order);
+	ret = sha204m_read_config(response_order);
 
 	sha204p_sleep();
 	
-	return 0;
+	return ret;
 }
 
 int sha204_read_otp(uint8_t *response_order)
 {	
+	int ret;
 	uint8_t buf[35];
 	uint8_t response_mac[35];
 	memset(response_mac, 0x0, sizeof(response_mac));
 	sha204c_wakeup(response_mac);
 
 	memset(buf, 0x0, 35);
-	sha204m_execute_read_otp(0x0000, buf);
+	ret  |= sha204m_execute_read_otp(0x0000, buf);
 	memmove(response_order, buf+1, 32);
 	memset(buf, 0x0, 35);
-	sha204m_execute_read_otp(0x0008, buf);
+	ret  |= sha204m_execute_read_otp(0x0008, buf);
 	memmove(response_order+32, buf+1, 32);
 
 	sha204p_sleep();
 	
-	return 0;
+	return ret;
 }
 
 int sha204_read_solt(uint8_t *secret_key, uint8_t *challenge, uint8_t solt_id, uint8_t read_id, uint8_t *solt_buf)
 {	
+	int ret;
 	uint8_t buf[35];
 	uint8_t response_mac[35];
 
 	memset(response_mac, 0x0, sizeof(response_mac));
 	sha204c_wakeup(response_mac);
 	
-	atsha204_enc_read(((read_id << 3)&0xFFFF), solt_id, secret_key, challenge, solt_buf);
+	ret = atsha204_enc_read(((read_id << 3)&0xFFFF), solt_id, secret_key, challenge, solt_buf);
 
 	sha204p_sleep();
 	
-	return 0;
+	return ret;
 }
 
 
@@ -913,7 +944,7 @@ int sha204_main_handle(uint8_t *secret_key, uint8_t *challenge, uint8_t solt_id,
 	uint8_t sha256_result[32];
 	uint8_t random_buf[35];
 	uint8_t challenge_tmp[32];
-	uint8_t i=0,result=0;
+	uint8_t i=0,result=0, ret;
 
 	memset(response_mac, 0x0, sizeof(response_mac));
 	memset(sha256_result, 0x0, sizeof(sha256_result));
@@ -925,10 +956,10 @@ int sha204_main_handle(uint8_t *secret_key, uint8_t *challenge, uint8_t solt_id,
 
 	if(mode){
 		//printf("get random\n");
-		sha204m_execute_random(random_buf);
+		ret |= sha204m_execute_random(random_buf);
 
 		//printf("run nonce\n");
-		sha204m_execute_nonce(random_buf+1,response_mac);
+		ret |= sha204m_execute_nonce(random_buf+1,response_mac);
 
 		memmove(challenge_tmp, response_mac+1, 32);
 		memset(response_mac, 0x0, sizeof(response_mac));
@@ -938,10 +969,10 @@ int sha204_main_handle(uint8_t *secret_key, uint8_t *challenge, uint8_t solt_id,
 	}
 
 	//printf("calculate mac\n");
-	sha204_calculate_mac(secret_key,challenge_tmp,solt_id,sha256_result);  
+	ret |= sha204_calculate_mac(secret_key,challenge_tmp,solt_id,sha256_result);  
 
 	//printf("run mac\n");
-	sha204m_execute_mac(solt_id,challenge_tmp,response_mac);
+	ret |= sha204m_execute_mac(solt_id,challenge_tmp,response_mac);
 	
 	//printf("sleep IC\n");
 	sha204p_sleep();
