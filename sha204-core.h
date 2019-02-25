@@ -43,6 +43,8 @@ struct sha204h_gen_dig_in_out gendig_param;	//!< Parameter for gendig helper fun
 struct sha204h_temp_key tempkey;				//!< Tempkey parameter for nonce and mac helper function
 struct sha204h_decrypt_in_out dec_param;		//!< Parameter for decrypt helper function
 
+int sha204_read_cfg(uint8_t *response_order);
+int sha204_read_otp(uint8_t *response_order);
 int sha204_main_handle(uint8_t *secret_key, uint8_t *challenge, uint8_t solt_id, int mode);
 
 #endif

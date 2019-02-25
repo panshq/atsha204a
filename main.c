@@ -1,5 +1,5 @@
 #include<stdio.h>
-
+#include<string.h>
 #include"crypto.h"
 
 unsigned char secret_key_1[32] =  
@@ -21,8 +21,32 @@ unsigned char challenge_date[32] =
 
 int main()
 {
+	int i;
 	int ret = 0;
+	unsigned char buf[88];
+	
 	authentication_on();
+
+#if 0
+	memset(buf, 0x0, sizeof(buf));
+	get_cfg_data(buf);
+	printf("\nread cfg :");
+	for(i = 0; i < 88; i++)
+		printf("%02X ", buf[i]);
+	printf("\n");
+#endif 
+
+#if 0
+	memset(buf, 0x0, sizeof(buf));
+	get_opt_data(buf);
+	printf("\nread otp :");
+	for(i = 0; i < 64; i++)
+		printf("%02X ", buf[i]);
+	printf("\n");
+
+#endif
+
+
 	while(authentication_main(secret_key_1, challenge_date, 0, 1)){
 		authentication_off();
 		printf("check succ \n");	

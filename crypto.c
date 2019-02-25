@@ -26,6 +26,18 @@ void authentication_off()
 	ic_power_off();
 }
 
+void get_otp_data(uint8_t* buf)
+{
+	sha204_read_otp(buf);
+
+}
+
+void get_cfg_data(uint8_t* buf)
+{
+	sha204_read_cfg(buf);
+
+}
+
  inline int authentication_main(uint8_t *secret_key, uint8_t *challenge, uint8_t solt_id, int mode)
 {
 #if 0
