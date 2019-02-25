@@ -45,6 +45,7 @@ struct sha204h_decrypt_in_out dec_param;		//!< Parameter for decrypt helper func
 
 int sha204_read_cfg(uint8_t *response_order);
 int sha204_read_otp(uint8_t *response_order);
+int sha204_read_solt(uint8_t *secret_key, uint8_t *challenge, uint8_t solt_id, uint8_t read_id, uint8_t *solt_buf);
 int sha204_main_handle(uint8_t *secret_key, uint8_t *challenge, uint8_t solt_id, int mode);
 
 #endif

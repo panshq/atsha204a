@@ -38,6 +38,12 @@ void get_cfg_data(uint8_t* buf)
 
 }
 
+void get_solt_data(uint8_t *secret_key, uint8_t *challenge, uint8_t read_key_id, uint8_t read_solt_id, uint8_t* buf)
+{
+	sha204_read_solt(secret_key, challenge, read_key_id, read_solt_id, buf);
+
+}
+
  inline int authentication_main(uint8_t *secret_key, uint8_t *challenge, uint8_t solt_id, int mode)
 {
 #if 0

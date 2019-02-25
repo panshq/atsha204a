@@ -212,7 +212,7 @@ static void sha256_handle_nonce(uint8_t *Input,uint8_t *Output)
 	sha256_h[6] = 0x1f83d9ab;
 	sha256_h[7] = 0x5be0cd19;
 
-	memmove(sha256_block, Input, sizeof(Input));
+	memmove(sha256_block, Input, 55);
 	memset(sha256_block+55, 0x0, 9);
 
 	sha256_block[55]=0x80;
@@ -324,6 +324,7 @@ static uint8_t sha204h_gen_dig(struct sha204h_gen_dig_in_out param)
 	*p_temp++ =0x23;
 
 	memset(p_temp, 0x0, 25);
+	p_temp += 25;
 	
 	memcpy(p_temp, param.temp_key->value, 32);
 	
@@ -631,7 +632,8 @@ static uint8_t sha204m_execute_read_config_unit(uint8_t read_mode , uint16_t rea
 
 
 static int sha204m_execute_read_data_unit(uint8_t read_mode , uint16_t read_address, uint8_t *response_order)
-{
+{	
+	int i, cont = 20;
 	uint8_t p_buffer[2];
 	uint8_t tx_buffer[39];
 	
@@ -644,15 +646,39 @@ static int sha204m_execute_read_data_unit(uint8_t read_mode , uint16_t read_addr
 	sha204c_calculate_crc(5,tx_buffer, p_buffer);
 	tx_buffer[5]=p_buffer[0];
 	tx_buffer[6]=p_buffer[1];
-
+	
+	#if 0
+	printf("send:");
+	for(i = 0; i < 7; i++)
+		printf(" %02X", tx_buffer[i]);
+	printf("\n");
+	#endif
+	
 	sha204p_send_command(7,tx_buffer);
 
-	delay_ms(25);
-
-	if(read_mode&0x80) 
-		while(sha204p_receive_response(35, response_order));
-	else           
-		while(sha204p_receive_response(7, response_order));
+	delay_ms(35);
+	i = cont;
+	if(read_mode&0x80) {
+		while(sha204p_receive_response(35, response_order) && i)
+			i--;
+	#if 0
+		printf("recv:");
+		for(i = 0; i < 35; i++)
+			printf(" %02X", response_order[i]);
+		printf("\n");
+	#endif
+	
+	}else{           
+		while(sha204p_receive_response(7, response_order) && i)
+			i--;
+	#if 0
+		printf("recv:");
+		for(i = 0; i < 7; i++)
+			printf(" %02X", response_order[i]);
+		printf("\n");
+	#endif
+	
+	}
 	
 	return 0;
 }
@@ -751,38 +777,38 @@ static uint8_t sha204m_read_config(uint8_t *response_order)
 
 static uint8_t atsha204_enc_read(uint16_t slot_to_read,  uint16_t key_id, uint8_t* secret_key, uint8_t* NumIn,uint8_t dec_data[32])
 {
-	static uint8_t status =0;	    //!< Function execution status, initialized to SUCCES and bitmasked with error codes as needed.
-	uint8_t response_buffer[35];	//!< Receive data buffer
+	static uint8_t status =0;
+	uint8_t response_buffer[35];
 
+	memset(response_buffer, 0x0, sizeof(response_buffer));
 	sha204m_execute_nonce(NumIn,response_buffer);
-	
-	// Prepare parameters and nonce in host.
 	nonce_param.mode =0x01;
 	nonce_param.num_in = NumIn;
 	nonce_param.rand_out = &response_buffer[1];	   //返回32位随机数
 	nonce_param.temp_key = &tempkey;               //SHA256计算结果
 	status |= sha204h_nonce(nonce_param);
-	
-	sha204m_execute_gendig(key_id,response_buffer);
-	
-	// Prepare host software to compute equivalent GenDig information
+
+	sha204m_execute_gendig(key_id, response_buffer);
 	gendig_param.zone = 0x02;
 	gendig_param.key_id = key_id;
 	gendig_param.stored_value =secret_key;      //密钥
 	gendig_param.temp_key = &tempkey;	        //SHA256进出，结果
 	status |= sha204h_gen_dig(gendig_param);
-	
-	//Read encrypted data from the slot
+
 	status |=sha204m_execute_read_data_unit(0x82 , slot_to_read,response_buffer);
 	
-	memcpy(dec_data, &response_buffer[1], 32);
-	
+	memmove(dec_data, response_buffer+1, 32);
 	dec_param.data = dec_data;
 	dec_param.temp_key = &tempkey;
+
 	status |= sha204h_decrypt(dec_param);	  //解密明文
-	
-	// Compare the data
-	//status |= memcmp(dec_data,clear_data, 32);
+
+#if 0
+	printf("data:");
+	for(int i = 0; i < 32; i++)
+		printf("%02X ", dec_param.data[i]);
+	printf("\n");
+#endif
 
 	return 0x00;
 }
@@ -855,6 +881,23 @@ int sha204_read_otp(uint8_t *response_order)
 	
 	return 0;
 }
+
+int sha204_read_solt(uint8_t *secret_key, uint8_t *challenge, uint8_t solt_id, uint8_t read_id, uint8_t *solt_buf)
+{	
+	uint8_t buf[35];
+	uint8_t response_mac[35];
+
+	memset(response_mac, 0x0, sizeof(response_mac));
+	sha204c_wakeup(response_mac);
+	
+	atsha204_enc_read(((read_id << 3)&0xFFFF), solt_id, secret_key, challenge, solt_buf);
+
+	sha204p_sleep();
+	
+	return 0;
+}
+
+
 
 /***************************************************************************************
 fun		: 	sha204-main

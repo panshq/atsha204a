@@ -7,7 +7,7 @@ unsigned char secret_key_1[32] =
 	0x77, 0x77, 0x77, 0x2E, 0x31, 0x30, 0x30, 0x30,
 	0x76, 0x69, 0x64, 0x65, 0x2E, 0x63, 0x6F, 0x6D,
 	0x2E, 0x63, 0x6E, 0x2D, 0x32, 0x30, 0x31, 0x39,
-	0x30, 0x32, 0x31, 0x32, 0x2D, 0x4E, 0x30, 0x31
+	0x30, 0x32, 0x31, 0x32, 0x2D, 0x4E, 0x31, 0x36
 };
 
 unsigned char challenge_date[32] =
@@ -27,7 +27,7 @@ int main()
 	
 	authentication_on();
 
-#if 0
+#if 1
 	memset(buf, 0x0, sizeof(buf));
 	get_cfg_data(buf);
 	printf("\nread cfg :");
@@ -36,9 +36,9 @@ int main()
 	printf("\n");
 #endif 
 
-#if 0
+#if 1
 	memset(buf, 0x0, sizeof(buf));
-	get_opt_data(buf);
+	get_otp_data(buf);
 	printf("\nread otp :");
 	for(i = 0; i < 64; i++)
 		printf("%02X ", buf[i]);
@@ -46,8 +46,17 @@ int main()
 
 #endif
 
+#if 1
+	memset(buf, 0x0, sizeof(buf));
+	get_solt_data(secret_key_1, challenge_date, 0x0f, 2, buf);
+	printf("\nread solt :");
+	for(i = 0; i < 32; i++)
+		printf("%02X ", buf[i]);
+	printf("\n");
+	
+#endif
 
-	while(authentication_main(secret_key_1, challenge_date, 0, 1)){
+	while(authentication_main(secret_key_1, challenge_date, 0x0f, 1)){
 		authentication_off();
 		printf("check succ \n");	
 		return 0;
