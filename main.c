@@ -1,4 +1,5 @@
 #include<stdio.h>
+#include<stdlib.h>
 #include<string.h>
 #include"crypto.h"
 
@@ -7,7 +8,7 @@ unsigned char secret_key_1[32] =
 	0x77, 0x77, 0x77, 0x2E, 0x31, 0x30, 0x30, 0x30,
 	0x76, 0x69, 0x64, 0x65, 0x2E, 0x63, 0x6F, 0x6D,
 	0x2E, 0x63, 0x6E, 0x2D, 0x32, 0x30, 0x31, 0x39,
-	0x30, 0x32, 0x31, 0x32, 0x2D, 0x4E, 0x31, 0x36
+	0x30, 0x32, 0x31, 0x32, 0x2D, 0x4E, 0x30, 0x32
 };
 
 unsigned char challenge_date[32] =
@@ -24,45 +25,26 @@ int main()
 	int i;
 	int ret = 0;
 	unsigned char buf[88];
+	IC_INFO *info = (IC_INFO *)malloc(sizeof(IC_INFO));
+	IC_OPT *opt = (IC_OPT *)malloc(sizeof(IC_OPT));
+	memset(info, 0x0, sizeof(IC_INFO));
+	memset(opt, 0x0, sizeof(IC_OPT));
 	
-	authentication_on();
+	qst_ic_en();
 
-#if 1
-	memset(buf, 0x0, sizeof(buf));
-	ret = get_cfg_data(buf);
-	printf("\nread cfg :");
-	for(i = 0; i < 88; i++)
-		printf("%02X ", buf[i]);
-	printf("\n");
-#endif 
-
-#if 1
-	memset(buf, 0x0, sizeof(buf));
-	ret = get_otp_data(buf);
-	printf("\nread otp :");
-	for(i = 0; i < 64; i++)
-		printf("%02X ", buf[i]);
-	printf("\n");
-
-#endif
-
-#if 1
-	memset(buf, 0x0, sizeof(buf));
-	ret = get_solt_data(secret_key_1, challenge_date, 0x0f, 2, buf);
-	printf("\nread solt :");
-	for(i = 0; i < 32; i++)
-		printf("%02X ", buf[i]);
-	printf("\n");
+	qst_get_ic_version_info(info);
+	printf("otp: \nflag:%s \ntime:%s \nverion:%s\n", info->identification, info->time, info->version);
 	
-#endif
-
-	while(authentication_main(secret_key_1, challenge_date, 0x0f, 1)){
-		authentication_off();
+	qst_get_ic_option(opt);
+	printf("opt: \nmaster_opt:%x\nminor_opt:%x\n", opt->master_opt, opt->minor_opt);
+	
+	while(qst_ic_verify(secret_key_1, challenge_date, 0x01, 1)){
+		qst_ic_off();
 		printf("check succ \n");	
 		return 0;
 	}
 	
-	authentication_off();
+	qst_ic_off();
 	printf("check fail \n");
 	return -1;
 }

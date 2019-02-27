@@ -12,7 +12,7 @@
 
 //#define CALC_TIME
 
-void authentication_on()
+void qst_ic_en()
 {
 	i2c_gpio_init();
 	//printf("i2c gpio init succ !\n");
@@ -21,15 +21,9 @@ void authentication_on()
 	//printf("ic power on \n");
 }
 
-void authentication_off()
+void qst_ic_off()
 {
 	ic_power_off();
-}
-
-int get_otp_data(uint8_t* buf)
-{
-	sha204_read_otp(buf);
-
 }
 
 int get_cfg_data(uint8_t* buf)
@@ -38,13 +32,49 @@ int get_cfg_data(uint8_t* buf)
 
 }
 
-int get_solt_data(uint8_t *secret_key, uint8_t *challenge, uint8_t read_key_id, uint8_t read_solt_id, uint8_t* buf)
-{
-	sha204_read_solt(secret_key, challenge, read_key_id, read_solt_id, buf);
+int qst_get_ic_version_info(IC_INFO *info)
+{	
+	char buf[64];
+	char *ch;
+	
+	memset(buf, 0x0, sizeof(buf));
+	sha204_read_otp(buf);
+	//printf("otp:%s \n", buf);//Flag:www.1000video.com.cn-Time:2019.03.01-Version:00.01.000.0000
 
+	memmove(info->identification, buf+5, 20);
+	memmove(info->time, buf+31, 10);
+	memmove(info->version, buf+50, 14);
+
+	return 0;
 }
 
- inline int authentication_main(uint8_t *secret_key, uint8_t *challenge, uint8_t solt_id, int mode)
+int qst_get_ic_option(IC_OPT *opt)
+{
+	char buf[64];
+	char tmp[5];
+	uint8_t read_key[32]={0x53, 0x75, 0x5A, 0x68, 0x6F, 0x75, 0x51, 0x69, 
+						0x61, 0x6E, 0x53, 0x68, 0x69, 0x54, 0x6F, 0x6E, 
+						0x67, 0x52, 0x65, 0x61, 0x64, 0x4F, 0x70, 0x74, 
+						0x69, 0x6F, 0x6E, 0x53, 0x6F, 0x6C, 0x74, 0x30};
+	uint8_t challenge[32]={0};
+	
+	memset(buf, 0x0, sizeof(buf));
+	memset(tmp, 0x0, sizeof(tmp));
+	memset(challenge, 0x0, sizeof(challenge));
+	sha204_read_solt(read_key, challenge, 0x0f, 0x00, buf);
+
+	//printf("otp:%s \n", buf);//otp:Option:0000-0000
+	
+	strncpy(tmp, buf+7, 4);
+	opt->master_opt = strtol(tmp, NULL, 16);
+	
+	strncpy(tmp, buf+12, 4);
+	opt->minor_opt= strtol(tmp, NULL, 16);
+	
+	return 0;
+}
+
+ inline int qst_ic_verify(uint8_t *secret_key, uint8_t *challenge, uint8_t solt_id, int mode)
 {
 #if 0
 	int i = 0, j;
