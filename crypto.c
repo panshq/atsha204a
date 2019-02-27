@@ -8,11 +8,11 @@
 
 #include "i2c-core.h"
 #include "sha204-core.h"
-#include "crypto.h"
+#include "qst_authen.h"
 
 //#define CALC_TIME
 
-void qst_ic_en()
+void qst_authen_on()
 {
 	i2c_gpio_init();
 	//printf("i2c gpio init succ !\n");
@@ -21,7 +21,7 @@ void qst_ic_en()
 	//printf("ic power on \n");
 }
 
-void qst_ic_off()
+void qst_authen_off()
 {
 	ic_power_off();
 }
@@ -32,7 +32,7 @@ int get_cfg_data(uint8_t* buf)
 
 }
 
-int qst_get_ic_version_info(IC_INFO *info)
+int qst_authen_get_version(IC_INFO *info)
 {	
 	char buf[64];
 	char *ch;
@@ -41,14 +41,14 @@ int qst_get_ic_version_info(IC_INFO *info)
 	sha204_read_otp(buf);
 	//printf("otp:%s \n", buf);//Flag:www.1000video.com.cn-Time:2019.03.01-Version:00.01.000.0000
 
-	memmove(info->identification, buf+5, 20);
+	memmove(info->id, buf+5, 20);
 	memmove(info->time, buf+31, 10);
 	memmove(info->version, buf+50, 14);
 
 	return 0;
 }
 
-int qst_get_ic_option(IC_OPT *opt)
+int qst_authen_get_option(IC_OPT *opt)
 {
 	char buf[64];
 	char tmp[5];
@@ -74,7 +74,7 @@ int qst_get_ic_option(IC_OPT *opt)
 	return 0;
 }
 
- inline int qst_ic_verify(uint8_t *secret_key, uint8_t *challenge, uint8_t solt_id, int mode)
+ inline int qst_authen_verify(uint8_t *secret_key, uint8_t *challenge, uint8_t solt_id, int mode)
 {
 #if 0
 	int i = 0, j;

@@ -1,7 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
-#include"crypto.h"
+#include"qst_authen.h"
 
 unsigned char secret_key_1[32] =  
 {
@@ -30,21 +30,21 @@ int main()
 	memset(info, 0x0, sizeof(IC_INFO));
 	memset(opt, 0x0, sizeof(IC_OPT));
 	
-	qst_ic_en();
+	qst_authen_on();
 
-	qst_get_ic_version_info(info);
-	printf("otp: \nflag:%s \ntime:%s \nverion:%s\n", info->identification, info->time, info->version);
+	qst_authen_get_version(info);
+	printf("otp: \nflag:%s \ntime:%s \nverion:%s\n", info->id, info->time, info->version);
 	
-	qst_get_ic_option(opt);
+	qst_authen_get_option(opt);
 	printf("opt: \nmaster_opt:%x\nminor_opt:%x\n", opt->master_opt, opt->minor_opt);
 	
-	while(qst_ic_verify(secret_key_1, challenge_date, 0x01, 1)){
-		qst_ic_off();
+	while(qst_authen_verify(secret_key_1, challenge_date, 0x01, 1)){
+		qst_authen_off();
 		printf("check succ \n");	
 		return 0;
 	}
 	
-	qst_ic_off();
+	qst_authen_off();
 	printf("check fail \n");
 	return -1;
 }
